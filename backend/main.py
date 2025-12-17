@@ -7,6 +7,7 @@ from langchain_openai import ChatOpenAI
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
+import requests
 
 import os
 
@@ -43,23 +44,64 @@ class ChatResponse(BaseModel):
 #Tool Calling
 @tool(args_schema=WeatherInput)
 def get_weather(location: str, units: str = "celsius", include_forecast: bool = False) -> str:
-    """Get current weather and optional forecast."""
-    temp = 22 if units == "celsius" else 72
-    result = f"Current weather in {location}: {temp} degrees {units[0].upper()}"
-    if include_forecast:
-        result += "\nNext 5 days: Sunny"
-    return result
+    """Fetch live weather data using OpenWeatherMap API."""
+    
+    print(f"\n[TOOL CALLED] get_weather")
+    print(f"  Location: {location}")
+    print(f"  Units: {units}")
+
+    api_key = os.getenv("OPENWEATHER_API_KEY")
+    if not api_key:
+        return "Weather service is not configured."
+
+    unit_param = "metric" if units == "celsius" else "imperial"
+
+    url = "https://api.openweathermap.org/data/2.5/weather"
+    params = {
+        "q": location,
+        "appid": api_key,
+        "units": unit_param
+    }
+    
+    print(f"  Calling: {url}?q={location}&units={unit_param}")
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        print(f"  Status: {response.status_code}")
+
+        if response.status_code != 200:
+            error = response.json()
+            print(f"  Error: {error}")
+            return f"Could not fetch weather for {location}. {error.get('message', '')}"
+
+        data = response.json()
+        temp = data["main"]["temp"]
+        feels_like = data["main"]["feels_like"]
+        description = data["weather"][0]["description"].capitalize()
+
+        result = (
+            f"Current weather in {location}:\n"
+            f"- Temperature: {temp}°{'C' if units == 'celsius' else 'F'}\n"
+            f"- Feels like: {feels_like}°{'C' if units == 'celsius' else 'F'}\n"
+            f"- Condition: {description}"
+        )
+        print(f"  Success! Returning weather data\n")
+        return result
+        
+    except Exception as e:
+        print(f"  Exception: {e}\n")
+        return f"Error: {str(e)}"
 
 tools = [get_weather]
 
 llm = ChatOpenAI(
-    model="openai/gpt-oss-20b:free",
+    model="openai/gpt-oss-20b",
     openai_api_key=os.getenv("OPENROUTER_API_KEY"),
     openai_api_base="https://openrouter.ai/api/v1"
 )
 
 prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant that can provide weather information."),
+    ("system", "You are a helpful assistant that can provide accurate and up-to-date weather information."),
     ("human", "{input}"),
     ("placeholder", "{agent_scratchpad}"),
 ])
