@@ -1,0 +1,12 @@
+{
+  "name": "render-keep-alive",
+  "version": "1.0.0",
+  "description": "Cron job to keep Render backend alive",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "cron": "^3.1.6"
+  }
+}
