@@ -20,7 +20,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://weather-check-wheat.vercel.app",
-        "https://weather-check-2.onrender.com"
+        "https://weather-check-2.onrender.com", 
+        "https://weather-check-hxses7l0j-jadhavparth2004-2339s-projects.vercel.app/"
     ],
     allow_credentials=True,
     allow_methods=["*"],
